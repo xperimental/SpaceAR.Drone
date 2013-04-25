@@ -2,6 +2,7 @@ package ch.gdgch.devfest.spacear.drone;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 import android.widget.Toast;
 import com.codeminders.ardrone.ARDrone;
@@ -22,12 +23,13 @@ import android.widget.ProgressBar;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
-public class SpaceMouseControlActivity extends Activity implements SpaceNavigator.MouseListener {
+public class SpaceMouseControlActivity extends Activity implements SpaceNavigator.MouseListener, DroneControl.DroneListener {
 
     private static final String ACTION_USB_PERMISSION = "ch.gdgch.devfest.spacear.drone.USB_PERMISSION";
 
 	private final static int AXIS_MAX=400;
     private SpaceNavigator mMouse;
+    private DroneControl mDrone;
     private UsbManager mUsbManager;
     private PendingIntent mPermissionIntent;
     private IntentFilter mIntentFilter;
@@ -47,6 +49,14 @@ public class SpaceMouseControlActivity extends Activity implements SpaceNavigato
 		setContentView(R.layout.activity_space_mouse_control);
         mMouse = new SpaceNavigator(this);
         mMouse.setListener(this);
+        InetAddress addr = null;
+        try {
+            addr = InetAddress.getByAddress(DroneControl.DEFAULT_DRONE_IP);
+            mDrone = new DroneControl(addr);
+            mDrone.setListener(this);
+        } catch (UnknownHostException e) {
+            Toast.makeText(this, "Can not resolve drone IP.", Toast.LENGTH_SHORT).show();
+        }
         mUsbManager = (UsbManager) getSystemService(USB_SERVICE);
 
 		conn_tv=(TextView)findViewById(R.id.connection);
@@ -104,12 +114,14 @@ public class SpaceMouseControlActivity extends Activity implements SpaceNavigato
         super.onResume();
 
         mMouse.resume();
+        mDrone.connect();
     }
 
     @Override
     protected void onPause() {
         super.onPause();
 
+        mDrone.disconnect();
         mMouse.pause();
     }
 
@@ -136,6 +148,11 @@ public class SpaceMouseControlActivity extends Activity implements SpaceNavigato
         conn_tv.setText(connected ? "true" : "false");
     }
 
+    @Override
+    public void onDroneState(DroneControl.DroneState state) {
+        mHandler.post(new UpdateRunnable());
+    }
+
     private void checkForDevice() {
         UsbDevice device = mMouse.findDevice();
         if (device == null) {
@@ -148,14 +165,6 @@ public class SpaceMouseControlActivity extends Activity implements SpaceNavigato
 
 
     Handler mHandler=new Handler();
-    enum DroneState {
-		CONNECTING,
-		CONNECTED,
-		LANDED,
-		FLYING;
-    }
-	
-	DroneState drone_state=DroneState.CONNECTING;
 	
 	class UpdateRunnable implements Runnable {
 
@@ -186,47 +195,22 @@ public class SpaceMouseControlActivity extends Activity implements SpaceNavigato
 			yaw_tv.setText("" + act_yaw);
 			
 			btns_tv.setText("" + btns);
-			
-			drone_state_tv.setText(""+drone_state);
+
+            DroneControl.DroneState state = mDrone.getCurrentState();
+			drone_state_tv.setText(state.toString());
 
 			
-			if (drone_state==DroneState.FLYING) 
-	        try {
-	        	
-				drone.move(act_roll/600f, act_nick/600f,act_alt/-800f, act_yaw/360f);
-			} catch (IOException e1) {
+			if (state == DroneControl.DroneState.FLYING)
+            {
+                mDrone.move(act_roll/600f, act_nick/600f,act_alt/-800f, act_yaw/360f);
+            }
+			
+			if ((btns==1)&&(state == DroneControl.DroneState.CONNECTED || state == DroneControl.DroneState.LANDED)) {
+				mDrone.takeoff();
 			}
 			
-			if ((btns==1)&&(drone_state==DroneState.CONNECTED || drone_state==DroneState.LANDED)) {
-				
-				try {
-					drone.clearEmergencySignal();
-					Log.i(TAG,"trim");
-	                drone.trim();
-	                Log.i(TAG,"takeof");
-	                drone.takeOff();
-	                
-	                drone_state=DroneState.FLYING;
-	                
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-                
-			}
-			
-			if ((btns==2)&&(drone_state==DroneState.FLYING)) {
-				
-				try {
-					drone.land();
-					
-					drone_state=DroneState.LANDED;
-	                
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-                
+			if ((btns==2)&&(state == DroneControl.DroneState.FLYING)) {
+				mDrone.land();
 			}
 		}
 		
@@ -255,73 +239,4 @@ public class SpaceMouseControlActivity extends Activity implements SpaceNavigato
 		}
 	};
 
-
-    // drone stuff
-    public final static String TAG="SpaceMouseControl";
-    
-    private static final long CONNECTION_TIMEOUT = 10000;
-    
-    final static byte[]                     DEFAULT_DRONE_IP  = { (byte) 192, (byte) 168, (byte) 1, (byte) 1 };
-
-	static ARDrone drone;
-
-
-    private class DroneStarter extends AsyncTask<ARDrone, Integer, Boolean> {
-        
-        @Override
-        protected Boolean doInBackground(ARDrone... drones) {
-            ARDrone drone = drones[0];
-            try {
-            	Log.i(TAG,"connecting to drone");
-            	drone = new ARDrone(InetAddress.getByAddress(DEFAULT_DRONE_IP), 10000, 60000);
-                SpaceMouseControlActivity.drone = drone; // passing in null objects will not pass object refs
-                drone.connect();
-                drone.clearEmergencySignal();
-                drone.waitForReady(CONNECTION_TIMEOUT);
-                drone.playLED(1, 10, 4);
-                //drone.addImageListener(MainActivity.mainActivity);
-                //drone.selectVideoChannel(ARDrone.VideoChannel.HORIZONTAL_ONLY);
-                drone.setCombinedYawMode(false);
-                
-                return true;
-            } catch (Exception e) {
-            	Log.i(TAG,"connecting fail " + e);
-                try {
-                	
-                    drone.clearEmergencySignal();
-                    drone.clearImageListeners();
-                    drone.clearNavDataListeners();
-                    drone.clearStatusChangeListeners();
-                    drone.disconnect();
-                } catch (Exception e1) {
-                }
-              
-            }
-            return false;
-        }
-
-        
-
-        
-        protected void onPostExecute(Boolean success) {
-        	Log.i(TAG,"connecting post " + success.booleanValue());
-            if (success.booleanValue()) {
-            	  try
-                  {
-            		  
-            		  drone_state=DroneState.CONNECTED;
-                      
-                  } catch(Throwable e)
-                  {
-                      e.printStackTrace();
-                  }
-                /*state.setTextColor(Color.GREEN);
-                state.setText("Connected");
-                connectButton.setEnabled(false);
-                mainActivity.showButtons();
-                */
-            } else {
-            }
-        }
-    }
 }
