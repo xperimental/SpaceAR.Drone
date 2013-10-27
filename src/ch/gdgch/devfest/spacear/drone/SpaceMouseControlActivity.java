@@ -15,12 +15,12 @@ import android.widget.*;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
-public class SpaceMouseControlActivity extends Activity implements SpaceNavigator.MouseListener, DroneControl.DroneListener {
+public class SpaceMouseControlActivity extends Activity implements MouseListener, DroneControl.DroneListener {
 
     private static final String ACTION_USB_PERMISSION = "ch.gdgch.devfest.spacear.drone.USB_PERMISSION";
 
 	private final static int AXIS_MAX=400;
-    private SpaceNavigator mMouse;
+    private DroneInput mMouse;
     private DroneControl mDrone;
     private UsbManager mUsbManager;
     private PendingIntent mPermissionIntent;
@@ -39,7 +39,7 @@ public class SpaceMouseControlActivity extends Activity implements SpaceNavigato
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_space_mouse_control);
-        mMouse = new SpaceNavigator(this);
+        mMouse = DroneInputFactory.newInstance(this);
         mMouse.setListener(this);
         InetAddress addr = null;
         try {

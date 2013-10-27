@@ -9,7 +9,7 @@ import android.hardware.usb.UsbInterface;
 import android.hardware.usb.UsbManager;
 import android.util.Log;
 
-public class SpaceNavigator {
+public class SpaceNavigator implements DroneInput {
 
     private static final String TAG = "SpaceNavigator";
     private static final byte TYPE_TRANSLATE = 1;
