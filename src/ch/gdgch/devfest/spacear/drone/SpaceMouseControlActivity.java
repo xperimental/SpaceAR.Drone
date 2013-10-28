@@ -10,6 +10,8 @@ import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbManager;
 import android.os.Bundle;
 import android.os.Handler;
+import android.view.KeyEvent;
+import android.view.MotionEvent;
 import android.widget.*;
 
 import java.net.InetAddress;
@@ -230,5 +232,15 @@ public class SpaceMouseControlActivity extends Activity implements MouseListener
             }
 		}
 	};
+
+    @Override
+    public boolean onGenericMotionEvent(MotionEvent event) {
+        return mMouse.handleGenericMotionEvent(event);
+    }
+
+    @Override
+    public boolean dispatchKeyEvent(KeyEvent event) {
+        return mMouse.handleKeyEvent(event);
+    }
 
 }

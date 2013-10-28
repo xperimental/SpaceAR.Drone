@@ -8,6 +8,8 @@ import android.hardware.usb.UsbEndpoint;
 import android.hardware.usb.UsbInterface;
 import android.hardware.usb.UsbManager;
 import android.util.Log;
+import android.view.KeyEvent;
+import android.view.MotionEvent;
 
 public class SpaceNavigator implements DroneInput {
 
@@ -34,6 +36,17 @@ public class SpaceNavigator implements DroneInput {
         this.mUsbManager = (UsbManager) context.getSystemService(Context.USB_SERVICE);
     }
 
+    @Override
+    public boolean handleGenericMotionEvent(MotionEvent event) {
+        return false;
+    }
+
+    @Override
+    public boolean handleKeyEvent(KeyEvent event) {
+        return false;
+    }
+
+    @Override
     public boolean openDevice(UsbDevice device) {
         closeDevice();
 
@@ -65,6 +78,7 @@ public class SpaceNavigator implements DroneInput {
         return false;
     }
 
+    @Override
     public void closeDevice() {
         if (mDeviceConnection != null) {
             if (mResumed && mWaiterThread != null && mWaiterThread.isAlive()) {
@@ -83,6 +97,7 @@ public class SpaceNavigator implements DroneInput {
         }
     }
 
+    @Override
     public UsbDevice findDevice() {
         for (UsbDevice device : mUsbManager.getDeviceList().values()) {
             if (SpaceNavigator.isMouse(device)) {
@@ -92,11 +107,13 @@ public class SpaceNavigator implements DroneInput {
         return null;
     }
 
+    @Override
     public void resume() {
         mResumed = true;
         updateThreadState();
     }
 
+    @Override
     public void pause() {
         mResumed = false;
         updateThreadState();

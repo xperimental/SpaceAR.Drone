@@ -5,7 +5,7 @@ import android.content.Context;
 public class DroneInputFactory {
 
     public static DroneInput newInstance(Context context) {
-        return new SpaceNavigator(context);
+        return new GameControllerInput(context);
     }
 
 }
