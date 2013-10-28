@@ -17,7 +17,8 @@
         <activity
             android:name=".SpaceMouseControlActivity"
             android:label="@string/title_activity_space_mouse_control"
-            android:launchMode="singleTask" >
+            android:launchMode="singleTask"
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
